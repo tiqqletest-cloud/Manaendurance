@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactive WoW mana and DPS calculator: compare Spirit, Intellect, gear MP5 and spell power by how long you last and how much damage you deal.">
+<title>Mana Endurance Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral+SC:wght@600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#07090f; --panel:#111624; --panel2:#171e31; --ink:#ffffff; --muted:#c3cce0; --line:#34405e;
+  --mana:#2f9bff; --mana-soft:rgba(47,155,255,.22); --ghost:#8a96b3;
+  --spi:#2af5c8; --int:#c08cff; --mp5:#ffd400; --sp:#ff4fb8;
+  --good:#5cff7a; --good-soft:rgba(92,255,122,.16); --warn:#ffa31a; --warn-soft:rgba(255,163,26,.18); --bad:#ff4545; --bad-soft:rgba(255,69,69,.18);
+  --display:"Spectral SC", Georgia, serif; --sans:"IBM Plex Sans", system-ui, -apple-system, sans-serif; --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;padding-inline:16px;padding-block:28px 44px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:22px}
+header h1{font-family:var(--display);font-weight:600;font-size:36px;letter-spacing:.02em;margin:0;text-wrap:balance;color:var(--ink)}
+header h1 span{color:var(--mana)}
+header p{margin:6px 0 0;color:var(--muted);max-width:70ch}
+.key{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13px;padding:5px 12px;border-radius:99px;border:2px solid currentColor;background:var(--panel)}
+.chip::before{content:"";width:10px;height:10px;border-radius:50%;background:currentColor}
+.c-spi{color:var(--spi)} .c-int{color:var(--int)} .c-mp5{color:var(--mp5)} .c-sp{color:var(--sp)} .c-mana{color:var(--mana)}
+.grid{display:grid;grid-template-columns:330px 1fr;gap:22px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
+.panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink);margin:0 0 14px;font-weight:700;display:flex;align-items:center;gap:10px}
+.panel h2::before{content:"";width:4px;height:14px;background:var(--mana);border-radius:2px}
+.inputs{display:grid;gap:20px}
+.group{display:grid;gap:14px}
+.field{display:grid;gap:5px}
+.field .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.field label{font-weight:600}
+.field.stat-spi label{color:var(--spi)} .field.stat-int label{color:var(--int)} .field.stat-mp5 label{color:var(--mp5)} .field.stat-sp label{color:var(--sp)}
+.field.stat-spi input[type=range]{accent-color:var(--spi)} .field.stat-int input[type=range]{accent-color:var(--int)} .field.stat-mp5 input[type=range]{accent-color:var(--mp5)} .field.stat-sp input[type=range]{accent-color:var(--sp)}
+.field .hint{font-size:12.5px;color:var(--muted)}
+.field input[type=number]{width:88px;font-family:var(--mono);font-size:15px;font-weight:500;text-align:right;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.field.stat-spi input[type=number]{border-color:var(--spi)} .field.stat-int input[type=number]{border-color:var(--int)} .field.stat-mp5 input[type=number]{border-color:var(--mp5)} .field.stat-sp input[type=number]{border-color:var(--sp)}
+.field input[type=range]{width:100%;accent-color:var(--mana)}
+select{width:100%;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.divider{height:1px;background:var(--line)}
+.derived{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:14px}
+.derived span:nth-child(odd){color:var(--muted)}
+.derived span:nth-child(even){font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.results{display:grid;gap:22px}
+.verdict{display:flex;gap:16px;align-items:center;padding:16px 18px;border-radius:12px;border:2px solid var(--line);background:var(--panel);font-size:17px;font-weight:500}
+.verdict.good{border-color:var(--good)} .verdict.warn{border-color:var(--warn)} .verdict.bad{border-color:var(--bad)}
+.pill{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:5px 12px;border-radius:99px;white-space:nowrap}
+.pill.good{background:var(--good);color:#04130a} .pill.warn{background:var(--warn);color:#1a0f00} .pill.bad{background:var(--bad);color:#fff}
+.pill.best{background:var(--ink);color:var(--bg);margin-left:8px;font-size:10.5px;padding:3px 9px}
+.verdict p{margin:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat .k{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:32px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;color:var(--ink)}
+.stat .v.mana{color:var(--mana)} .stat .v.bad{color:var(--bad)} .stat .v.good{color:var(--good)}
+.stat .s{font-size:13px;color:var(--muted)}
+#dps{grid-template-columns:repeat(4,1fr)}
+@media (max-width:1000px){#dps{grid-template-columns:repeat(2,1fr)}}
+#values td{white-space:nowrap}
+.chart-wrap{overflow-x:auto}
+svg text{font-family:var(--mono);font-size:12px;fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:18px;font-size:13px;color:var(--ink);margin-top:10px}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid var(--mana);vertical-align:middle;margin-right:7px}
+.legend i.ghost{border-top:3px dashed var(--ghost)}
+.legend i.target{border-top:3px dotted var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+th:first-child,td:first-child{text-align:left;white-space:nowrap}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+td{font-family:var(--mono);font-weight:500} td:first-child{font-family:var(--sans);font-weight:700}
+tr.row-int td:first-child{color:var(--int)} tr.row-spi td:first-child{color:var(--spi)} tr.row-mp5 td:first-child{color:var(--mp5)} tr.row-sp td:first-child{color:var(--sp)} tr.row-mana td:first-child{color:var(--mana)}
+.field.stat-mana label{color:var(--mana)} .field.stat-mana input[type=number]{border-color:var(--mana)}
+tr.row-int td:first-child::before, tr.row-spi td:first-child::before, tr.row-mp5 td:first-child::before, tr.row-sp td:first-child::before, tr.row-mana td:first-child::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:currentColor;margin-right:8px;vertical-align:1px}
+tr.is-best td{background:rgba(255,255,255,.06)}
+th.c-spi{color:var(--spi)} th.c-int{color:var(--int)} th.c-mp5{color:var(--mp5)}
+.bar{display:inline-block;height:8px;border-radius:4px;background:currentColor;vertical-align:middle;margin-right:8px;opacity:.9}
+.note{font-size:13px;color:var(--muted);margin:12px 0 0;max-width:72ch}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+details[open] summary{margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span>Mana</span> Endurance Planner</h1>
+    <p>Chain-casting one spell nonstop, how long does your mana bar hold? Adjust Spirit, Intellect, gear MP5 and spell power to see when you go OOM, how much damage you deal over the fight, and which stat is worth the most. Defaults are your current character, except base damage, which is an example.</p>
+    <div class="key"><span class="chip c-spi">Spirit</span><span class="chip c-int">Intellect</span><span class="chip c-mp5">Gear MP5</span><span class="chip c-sp">Spell power</span><span class="chip c-mana">Mana</span></div>
+  </header>
+
+  <div class="grid">
+    <form class="panel inputs" id="form" onsubmit="event.preventDefault()">
+      <div class="group">
+        <h2>Character</h2>
+        <div class="field stat-spi">
+          <div class="row"><label for="spirit">Spirit</label><input type="number" id="spirit" min="0" max="600" value="62"></div>
+          <input type="range" id="spiritR" min="0" max="400" value="62" aria-label="Spirit slider">
+        </div>
+        <div class="field stat-int">
+          <div class="row"><label for="intel">Intellect</label><input type="number" id="intel" min="0" max="600" value="48"></div>
+          <input type="range" id="intelR" min="0" max="300" value="48" aria-label="Intellect slider">
+          <span class="hint" id="intHint"></span>
+        </div>
+        <div class="field stat-mp5">
+          <div class="row"><label for="gear">Gear MP5</label><input type="number" id="gear" min="0" max="300" value="0"></div>
+          <input type="range" id="gearR" min="0" max="120" value="0" aria-label="Gear MP5 slider">
+          <span class="hint">"+X mana every 5 sec" on items. Works fully while casting.</span>
+        </div>
+        <details>
+          <summary>Your character sheet (calibration)</summary>
+          <div class="group">
+            <div class="field"><div class="row"><label for="refI">Intellect on sheet</label><input type="number" id="refI" min="1" value="48"></div></div>
+            <div class="field"><div class="row"><label for="refMana">Max mana on sheet</label><input type="number" id="refMana" min="0" value="855"></div></div>
+            <div class="field"><div class="row"><label for="refCrit">Crit from Intellect (%)</label><input type="number" id="refCrit" min="0" step="0.1" value="2.5"></div>
+            <span class="hint">Each Intellect point above 20 adds 15 mana. Crit from Intellect scales in proportion to these numbers.</span></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="group">
+        <h2>Spell and talent</h2>
+        <div class="field">
+          <div class="row"><label for="cost">Mana cost</label><input type="number" id="cost" min="1" max="2000" value="45"></div>
+        </div>
+        <div class="field stat-mana">
+          <div class="row"><label for="red">Mana cost reduction (%)</label><input type="number" id="red" min="0" max="15" step="1" value="0"></div>
+          <input type="range" id="redR" min="0" max="15" step="1" value="0" aria-label="Mana cost reduction slider">
+          <span class="hint" id="redHint"></span>
+        </div>
+        <div class="field">
+          <div class="row"><label for="cast">Cast time (sec)</label><input type="number" id="cast" min="0.5" max="10" step="0.1" value="2"></div>
+        </div>
+        <div class="field">
+          <div class="row"><label for="dmg">Base damage per cast</label><input type="number" id="dmg" min="0" max="20000" value="100"></div>
+          <span class="hint">Example value. Enter your spell's average hit with no spell power.</span>
+        </div>
+        <div class="field stat-sp">
+          <div class="row"><label for="sp">Bonus spell power</label><input type="number" id="sp" min="0" max="1500" value="0"></div>
+          <input type="range" id="spR" min="0" max="300" value="0" aria-label="Spell power slider">
+        </div>
+        <div class="field">
+          <div class="row"><label for="coef">Spell power coefficient (%)</label><input type="number" id="coef" min="0" max="200" step="0.1" value="57.1"></div>
+          <span class="hint">Classic rule of thumb: cast time ÷ 3.5 (2 sec = 57.1%).</span>
+        </div>
+        <div class="field">
+          <div class="row"><label for="critOther">Other spell crit (%)</label><input type="number" id="critOther" min="0" max="100" step="0.1" value="0"></div>
+          <span class="hint">Crit from talents, gear or base, on top of Intellect.</span>
+        </div>
+        <div class="field">
+          <div class="row"><label for="critMult">Crit damage (%)</label><input type="number" id="critMult" min="100" max="400" step="5" value="200"></div>
+          <span class="hint">200% means a crit hits for 2x.</span>
+        </div>
+        <div class="field">
+          <div class="row"><label for="pct">Regen while casting (%)</label><input type="number" id="pct" min="0" max="100" value="50"></div>
+          <span class="hint">Share of Spirit regen your talent keeps active mid-cast.</span>
+        </div>
+        <div class="field">
+          <div class="row"><label for="fight">Target fight length (sec)</label><input type="number" id="fight" min="10" max="900" step="5" value="120"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="group">
+        <h2>Spirit formula</h2>
+        <select id="formula" aria-label="Spirit formula">
+          <option value="prop">Proportional to Spirit (fit to your numbers)</option>
+          <option value="mage">Classic mage: 13 + Spirit/4 per tick</option>
+          <option value="priest">Classic priest: 12.5 + Spirit/4 per tick</option>
+        </select>
+        <details>
+          <summary>Calibration point for proportional</summary>
+          <div class="group">
+            <div class="field"><div class="row"><label for="refS">Known Spirit</label><input type="number" id="refS" min="1" value="62"></div></div>
+            <div class="field"><div class="row"><label for="refM">Its MP5 out of casting</label><input type="number" id="refM" min="0" value="70"></div></div>
+          </div>
+        </details>
+        <div class="derived" id="derived"></div>
+      </div>
+    </form>
+
+    <div class="results">
+      <div class="verdict" id="verdict"></div>
+      <div class="stats" id="stats"></div>
+
+      <div class="panel">
+        <h2>Mana while chain-casting</h2>
+        <div class="chart-wrap"><svg id="chart" viewBox="0 0 640 260" width="100%" role="img" aria-label="Mana over time chart"></svg></div>
+        <div class="legend">
+          <span><i></i>Your setup</span>
+          <span><i class="ghost"></i>Same mana, no regen while casting</span>
+          <span><i class="target"></i>Target fight length</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Damage over the fight</h2>
+        <div class="stats" id="dps"></div>
+        <p class="note">Casting keeps going after OOM: you cast again as soon as you have enough mana. Waiting 5 seconds without casting switches you to full regen. Only casts that finish before the fight ends count.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Value of one point</h2>
+        <div class="chart-wrap">
+        <table>
+          <thead><tr><th>+1 of</th><th>DPS gained</th><th>Equal to spell power</th><th>Mana over fight</th><th>Adds to OOM time</th></tr></thead>
+          <tbody id="values"></tbody>
+        </table>
+        </div>
+        <p class="note" id="valuesNote"></p>
+      </div>
+
+      <div class="panel">
+        <h2>What it takes</h2>
+        <table>
+          <thead><tr><th>Goal</th><th class="c-spi">Spirit</th><th class="c-int">or Intellect</th><th class="c-mp5">or Gear MP5</th></tr></thead>
+          <tbody id="needs"></tbody>
+        </table>
+        <p class="note">Each column changes one stat while holding the others at your current values. The first number is the total you'd need; the number in brackets is how much more than you have now. Intellect can't make casting infinite, since a bigger bar only delays OOM.</p>
+      </div>
+
+      <p class="note">Model: mana is checked at the start of each cast, casting regen starts after your first cast finishes, and the full out-of-casting regen never kicks in because you never stop for 5 seconds. Regen is treated as continuous rather than 2-second ticks, so real results can be off by a cast.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const num = (id, d=0) => { const v = parseFloat($(id).value); return isFinite(v) ? v : d; };
+
+// link sliders and number inputs
+[['spirit','spiritR'],['intel','intelR'],['gear','gearR'],['sp','spR'],['red','redR']].forEach(([n,r])=>{
+  $(r).addEventListener('input',()=>{ $(n).value=$(r).value; calc(); });
+  $(n).addEventListener('input',()=>{ $(r).value=$(n).value; calc(); });
+});
+['cost','cast','pct','fight','formula','refS','refM','dmg','coef','refI','refMana','refCrit','critOther','critMult'].forEach(id=>$(id).addEventListener('input',calc));
+
+function oocMP5(spi, f, refS, refM){
+  if (f==='mage') return (13 + spi/4) * 2.5;
+  if (f==='priest') return (12.5 + spi/4) * 2.5;
+  return spi * (refM/refS);
+}
+function spiritFor(mp5ooc, f, refS, refM){ // invert
+  if (f==='mage') return (mp5ooc/2.5 - 13) * 4;
+  if (f==='priest') return (mp5ooc/2.5 - 12.5) * 4;
+  return mp5ooc / (refM/refS);
+}
+// Number of casts before OOM; Infinity if sustainable
+function castsUntilOOM(M, c, T, r){
+  if (M < c) return 0;
+  if (r*T >= c) return Infinity;
+  // cast n (n>=2) affordable if M-(n-1)c + r(n-2)T >= c
+  // => n <= (M - c + c - 2rT + ... ) solve: M - n c + c + r n T - 2 r T >= c  -> n (c - rT) <= M - 2rT
+  const n = Math.floor((M - 2*r*T) / (c - r*T));
+  return Math.max(1, n);
+}
+const fmt = (x, d=0) => isFinite(x) ? x.toLocaleString(undefined,{maximumFractionDigits:d, minimumFractionDigits:d}) : '∞';
+const fmtTime = s => { if(!isFinite(s)) return '∞'; const m=Math.floor(s/60), r=Math.round(s%60); return m ? `${m}m ${String(r).padStart(2,'0')}s` : `${r}s`; };
+
+function calc(){
+  const spi=num('spirit'), intel=num('intel'), gear=num('gear');
+  const cRaw=Math.max(1,num('cost',45)), red=Math.min(15,Math.max(0,Math.round(num('red'))));
+  const c=cRaw*(1-red/100);
+  $('redHint').textContent = red ? `Each cast costs ${fmt(c,2)} mana instead of ${fmt(cRaw)}.` : 'Talents or gear that make spells cheaper. 0 to 15%.';
+  const T=Math.max(.1,num('cast',2)), pct=num('pct')/100, L=Math.max(T,num('fight',120));
+  const f=$('formula').value, refS=Math.max(1,num('refS',62)), refM=num('refM',70);
+
+  const refI=Math.max(1,num('refI',48)), refMana=num('refMana',855), refCrit=num('refCrit',2.5)/100;
+  const critOther=num('critOther')/100, critMult=Math.max(1,num('critMult',200)/100);
+  const intMana = x => x<=20 ? x : 20 + (x-20)*15;
+  const manaAt = x => Math.max(0, refMana + intMana(x) - intMana(refI));
+  const critAt = x => Math.min(1, Math.max(0, x*refCrit/refI + critOther));
+  const M = manaAt(intel);
+  const crit = critAt(intel);
+  $('intHint').textContent = `Gives ${fmt(M)} max mana and ${fmt(intel*refCrit/refI*100,2)}% spell crit.`;
+  const ooc = Math.max(0, oocMP5(spi,f,refS,refM));
+  const castMP5 = ooc*pct + gear;
+  const r = castMP5/5;                 // mana per second while casting
+  const burn = c/T*5;                  // MP5 spent
+  const n = castsUntilOOM(M,c,T,r);
+  const lasted = n*T;
+  const nNoRegen = Math.floor(M/c);
+
+  $('derived').innerHTML = `
+    <span>Max mana</span><span>${fmt(M)}</span>
+    <span>Spell crit</span><span>${fmt(crit*100,2)}%</span>
+    <span>MP5 not casting</span><span>${fmt(ooc,1)}</span>
+    <span>MP5 while casting</span><span>${fmt(castMP5,1)}</span>
+    <span>Mana per cast</span><span>${fmt(c,2)}</span>
+    <span>MP5 spent casting</span><span>${fmt(burn,1)}</span>`;
+
+  // verdict
+  let cls, label, text;
+  if (!isFinite(n)) { cls='good'; label='Infinite'; text=`Your casting regen (${fmt(castMP5,1)} MP5) covers the ${fmt(burn,1)} MP5 you spend. You never go OOM.`; }
+  else if (lasted >= L) { cls='warn'; label='Lasts the fight'; text=`You reach ${fmtTime(L)} with mana to spare and go OOM at ${fmtTime(lasted)}. You're ${fmt(burn-castMP5,1)} MP5 short of infinite.`; }
+  else { cls='bad'; label='OOM early'; text=`You go OOM at ${fmtTime(lasted)}, ${fmtTime(L-lasted)} before your ${fmtTime(L)} target.`; }
+  $('verdict').className = 'verdict '+cls;
+  $('verdict').innerHTML = `<span class="pill ${cls}">${label}</span><p>${text}</p>`;
+
+  // net per cast
+  const net = r*T - c;
+  $('stats').innerHTML = `
+    <div class="stat"><div class="k">Time until OOM</div><div class="v ${isFinite(n)?'bad':'good'}">${fmtTime(lasted)}</div><div class="s">${isFinite(n)? fmtTime(nNoRegen*T)+' with no casting regen' : 'regen outpaces spending'}</div></div>
+    <div class="stat"><div class="k">Casts before OOM</div><div class="v">${fmt(n)}</div><div class="s">${nNoRegen} with no casting regen</div></div>
+    <div class="stat"><div class="k">Net mana per cast</div><div class="v ${net>=0?'good':'bad'}">${net>=0?'+':''}${fmt(net,1)}</div><div class="s">${fmt(r*T,1)} back per ${fmt(c)} spent</div></div>`;
+
+  drawChart(M,c,T,r,L,n);
+  const dmgBase=num('dmg'), sp=num('sp'), coef=num('coef')/100;
+  const cfg = {c,cRaw,red,T,L,pct,f,refS,refM,dmgBase,coef,manaAt,critAt,critMult};
+  const cur = {spi, int:intel, gear, sp};
+  const res = simulate(cfg, cur);
+  const capCasts = Math.floor(L/T + 1e-9), hit = dmgBase + sp*coef, perCast = hit*(1 + crit*(critMult-1));
+  const capDps = capCasts*perCast/L;
+  $('dps').innerHTML = `
+    <div class="stat"><div class="k">DPS over ${fmtTime(L)}</div><div class="v mana">${fmt(res.dps,1)}</div><div class="s">${fmt(res.dps/Math.max(capDps,1e-9)*100)}% of your no-OOM ceiling</div></div>
+    <div class="stat"><div class="k">Total damage</div><div class="v">${fmt(res.dmg)}</div><div class="s">${fmt(perCast,1)} per cast avg (${fmt(hit)} hit, ${fmt(hit*critMult)} crit, ${fmt(crit*100,1)}% crit)</div></div>
+    <div class="stat"><div class="k">Casts landed</div><div class="v">${fmt(res.casts)}</div><div class="s">${capCasts} if mana never ran out</div></div>
+    <div class="stat"><div class="k">No-OOM ceiling</div><div class="v">${fmt(capDps,1)}</div><div class="s">DPS with unlimited mana</div></div>`;
+  statValues(M,c,T,r,L,spi,pct,f,refS,refM,cfg,cur,res.dps);
+  needs(M,c,T,r,L,spi,intel,gear,pct,f,refS,refM,ooc);
+}
+
+// Time-stepped fight: cast whenever affordable; 5-second rule for full regen
+function simulate(cfg, s){
+  const {c,T,L,pct,f,refS,refM,dmgBase,coef,manaAt,critAt,critMult} = cfg;
+  const Mx = manaAt(s.int), crit = critAt(s.int);
+  const ooc = Math.max(0, oocMP5(s.spi,f,refS,refM));
+  const rCast = (ooc*pct + s.gear)/5, rFull = (ooc + s.gear)/5;
+  const perCast = (dmgBase + s.sp*coef) * (1 + crit*(critMult-1));
+  const dt = 0.02, steps = Math.round(L/dt);
+  let m = Mx, casting=false, castEnd=0, lastSpend=-1e9, casts=0, firstDone=false;
+  for (let i=0;i<=steps;i++){
+    const t = i*dt;
+    if (casting && t >= castEnd - 1e-9){
+      casting=false; lastSpend=castEnd; firstDone=true;
+      if (castEnd <= L + 1e-9) casts++;
+    }
+    if (t >= L - 1e-9) break;
+    if (!casting && m >= c && t + T <= L + 1e-9){ m -= c; casting=true; castEnd = t + T; }
+    if (firstDone){
+      const rate = (!casting && t - lastSpend >= 5) ? rFull : rCast;
+      m = Math.min(Mx, m + rate*dt);
+    }
+  }
+  return {casts, dmg: casts*perCast, dps: casts*perCast/L};
+}
+
+function statValues(M,c,T,r,L,spi,pct,f,refS,refM,cfg,cur,baseDps){
+  // regen (mana/sec while casting) added by +1 of each stat
+  const dSpi = (oocMP5(spi+10,f,refS,refM) - oocMP5(spi,f,refS,refM))/10 * pct / 5;
+  const dGear = 1/5;
+  const dMana = { spi:0, int:15, gear:0 };
+  const dR = { spi:dSpi, int:0, gear:dGear };
+  // regen window during the target fight (regen starts after first cast)
+  const N = Math.ceil(L/T - 1e-9), span = Math.max(0,(N-2)*T);
+  // continuous time until OOM
+  const tOOM = (Mx, rx, cx=c) => (rx*T >= cx) ? Infinity : T*(Mx - 2*rx*T)/(cx - rx*T);
+  const base = tOOM(M,r);
+  // DPS gained per point: average over a +20 step to smooth out whole-cast jumps
+  const STEP = 20;
+  const bump = {
+    int:  s=>({...s, int: s.int + STEP}),
+    spi:  s=>({...s, spi: s.spi + STEP}),
+    gear: s=>({...s, gear: s.gear + STEP}),
+    sp:   s=>({...s, sp: s.sp + STEP})
+  };
+  const stats = [
+    {k:'int',  name:'Intellect', cls:'int'},
+    {k:'spi',  name:'Spirit', cls:'spi'},
+    {k:'gear', name:'Gear MP5', cls:'mp5'},
+    {k:'sp',   name:'Spell power', cls:'sp'},
+    {k:'red',  name:'−1% mana cost', cls:'mana'}
+  ].map(s=>{
+    if (s.k==='red'){
+      // averaged over a 5% step for the same whole-cast reason
+      const cStep = cfg.cRaw*0.05, casts = simulate(cfg, cur).casts;
+      const dDps = (simulate({...cfg, c: Math.max(0.01, cfg.c - cStep)}, cur).dps - baseDps)/5;
+      const manaFight = cfg.cRaw*0.01*casts;
+      const addT = isFinite(base) ? tOOM(M, r, c - cfg.cRaw*0.01) - base : null;
+      return {...s, dDps, manaFight, addT};
+    }
+    const dDps = (simulate(cfg, bump[s.k](cur)).dps - baseDps)/STEP;
+    if (s.k==='sp') return {...s, dDps, manaFight:null, addT:null};
+    const manaFight = dMana[s.k] + dR[s.k]*span;
+    const addT = isFinite(base) ? tOOM(M+dMana[s.k], r+dR[s.k]) - base : null;
+    return {...s, dDps, manaFight, addT};
+  });
+  const spVal = stats[3].dDps;
+  const best = stats.reduce((a,b)=> b.dDps>a.dDps+1e-9 ? b : a);
+  const maxD = Math.max(...stats.map(s=>s.dDps), 1e-9);
+  $('values').innerHTML = stats.map(s=>{ const isBest = s===best && s.dDps>0; return `<tr class="row-${s.cls}${isBest?' is-best':''}">
+    <td>${s.name}${isBest?'<span class="pill best">Best</span>':''}</td>
+    <td style="color:var(--${s.cls})"><span class="bar" style="width:${Math.max(0,s.dDps/maxD*60).toFixed(0)}px"></span><span style="color:var(--ink)">${s.dDps>0?'+':''}${fmt(s.dDps,3)}</span></td>
+    <td>${spVal>0 ? fmt(s.dDps/spVal,2) : '—'}</td>
+    <td>${s.manaFight===null ? '—' : fmt(s.manaFight,1)}</td>
+    <td>${s.addT===null ? '—' : '+'+fmt(s.addT,2)+'s'}</td></tr>`; }).join('');
+  const lastsFight = !isFinite(base) || base >= L;
+  $('valuesNote').textContent = (lastsFight
+      ? `You don't run out of mana within ${fmtTime(L)}, so Spirit and MP5 add no damage right now. Only spell power and the crit from Intellect help until you shorten your mana bar or lengthen the fight. `
+      : `You run out of mana before ${fmtTime(L)}, so mana stats add damage by buying extra casts. Spell power makes every cast hit harder, and Intellect does both: more mana and more crit. `)
+    + `The −1% mana cost row shows what one more percent of cost reduction would add, measured on the ${fmt(cfg.cRaw)} base cost. "Equal to spell power" shows how many points of spell power one point of that stat is worth. DPS gained is averaged over +${STEP} points because mana only turns into damage a whole cast at a time. Intellect adds 15 mana once plus a little crit; Spirit and gear MP5 keep paying out for about ${fmt(span)} seconds of casting regen.`;
+}
+
+function needs(M,c,T,r,L,spi,intel,gear,pct,f,refS,refM,ooc){
+  const rows=[];
+  const cell = (total, cur, d=0) => {
+    if (total===null) return '<td>—</td>';
+    if (total===Infinity) return '<td>not possible</td>';
+    const t=Math.max(total,0), delta=Math.max(0,Math.ceil(t-cur));
+    return `<td>${fmt(Math.ceil(t))} <span style="color:var(--muted)">(+${fmt(delta)})</span></td>`;
+  };
+  const spiNeededForOOC = needOOC => pct>0 ? Math.max(0, spiritFor(needOOC,f,refS,refM)) : Infinity;
+
+  // infinite
+  const needCast = c/T*5;
+  const spiInf = pct>0 ? spiNeededForOOC((needCast-gear)/pct) : Infinity;
+  const gearInf = needCast - ooc*pct;
+  rows.push(`<tr><td>Cast forever</td>${cell(spiInf,spi)}<td>not possible</td>${cell(gearInf,gear)}</tr>`);
+
+  // target fight length: N casts, need M - N c + r (N-2) T >= 0
+  const N = Math.ceil(L/T - 1e-9);
+  const span = Math.max(0,(N-2)*T);
+  const rNeed = span>0 ? (N*c - M)/span : (N*c<=M?0:Infinity);
+  const castMP5Need = rNeed*5;
+  const spiL = castMP5Need<=ooc*pct+gear ? spi : (pct>0 ? spiNeededForOOC((castMP5Need-gear)/pct) : Infinity);
+  const gearL = castMP5Need - ooc*pct;
+  const Mneed = N*c - r*span;
+  const intL = intel + Math.max(0,(Mneed - M))/15;
+  rows.push(`<tr><td>Last ${fmtTime(L)}</td>${cell(Math.max(spiL,spi>=spiL?spi:spiL),spi)}${cell(intL,intel)}${cell(Math.max(gearL,gear>=gearL?gear:gearL),gear)}</tr>`);
+  $('needs').innerHTML = rows.join('');
+}
+
+function drawChart(M,c,T,r,L,n){
+  const W=640,H=260,pl=48,pr=14,pt=14,pb=30;
+  const lastT = isFinite(n) ? n*T : Infinity;
+  let xMax = Math.min(900, Math.max(L, isFinite(lastT)? lastT : L) * 1.08);
+  const yMax = Math.max(M,1);
+  const x = t => pl + (t/xMax)*(W-pl-pr);
+  const y = m => pt + (1 - Math.max(0,Math.min(m,yMax))/yMax)*(H-pt-pb);
+
+  // simulate series: points at each cast start (before and after spend)
+  function series(rate){
+    const pts=[]; let m=M, t=0; pts.push([0,m]);
+    while (t <= xMax + 1e-9) {
+      if (m < c) break; // OOM: can't start the next cast
+      m -= c; pts.push([t,m]);
+      const regenStart = Math.max(t, T);
+      const tn = t + T;
+      m = Math.min(yMax, m + rate*Math.max(0, tn - regenStart));
+      t = tn; pts.push([Math.min(t,xMax), m]);
+      if (pts.length > 4000) break;
+    }
+    return pts.map(([a,b])=>`${x(a).toFixed(1)},${y(b).toFixed(1)}`).join(' ');
+  }
+
+  let g='';
+  // grid + y ticks
+  const step = niceStep(yMax/4);
+  for (let v=0; v<=yMax+1e-9; v+=step){
+    g += `<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/>`;
+    g += `<text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${fmt(v)}</text>`;
+  }
+  const xs = niceStep(xMax/6);
+  for (let t=0; t<=xMax+1e-9; t+=xs){
+    g += `<text x="${x(t)}" y="${H-10}" text-anchor="middle">${t}s</text>`;
+  }
+  // target
+  if (L<=xMax){
+    g += `<line x1="${x(L)}" x2="${x(L)}" y1="${pt}" y2="${H-pb}" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="2 3"/>`;
+  }
+  g += `<polyline points="${series(0)}" fill="none" stroke="var(--ghost)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  const main = series(r);
+  const firstX = x(0), lastPt = main.split(' ').pop().split(',')[0];
+  g += `<polygon points="${firstX},${y(0)} ${main} ${lastPt},${y(0)}" fill="var(--mana-soft)" stroke="none"/>`;
+  g += `<polyline points="${main}" fill="none" stroke="var(--mana)" stroke-width="2" stroke-linejoin="round"/>`;
+  if (isFinite(lastT) && lastT<=xMax){
+    g += `<circle cx="${x(lastT)}" cy="${y(0)}" r="4" fill="var(--bad)"/>`;
+    const anchor = x(lastT) > W-90 ? 'end' : 'start';
+    g += `<text x="${x(lastT)+(anchor==='end'?-8:8)}" y="${y(0)-8}" text-anchor="${anchor}" style="fill:var(--bad)">OOM ${fmtTime(lastT)}</text>`;
+  }
+  g += `<line x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-width="1"/>`;
+  $('chart').innerHTML = g;
+}
+function niceStep(raw){
+  const p = Math.pow(10, Math.floor(Math.log10(Math.max(raw,1e-9))));
+  const f = raw/p; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p;
+}
+calc();
+</script>
+</body>
+</html>
